@@ -443,8 +443,8 @@ class Segment(BasePathMixin):
     def __init__(self, uri=None, base_uri=None, program_date_time=None, current_program_date_time=None,
                  duration=None, title=None, bitrate=None, byterange=None, cue_out=False,
                  cue_out_start=False, cue_in=False, discontinuity=False, key=None, scte35=None,
-                 scte35_duration=None, scte35_elapsedtime=None, keyobject=None, parts=None,
-                 init_section=None, dateranges=None, gap_tag=None, custom_parser_values=None):
+                 scte35_duration=None, scte35_elapsedtime=None, cue_out_marker=None, keyobject=None,
+                 parts=None, init_section=None, dateranges=None, gap_tag=None, custom_parser_values=None):
         self.uri = uri
         self.duration = duration
         self.title = title
@@ -460,6 +460,7 @@ class Segment(BasePathMixin):
         self.scte35 = scte35
         self.scte35_duration = scte35_duration
         self.scte35_elapsedtime = scte35_elapsedtime
+        self.cue_out_marker = cue_out_marker
         self.key = keyobject
         self.parts = PartialSegmentList( [ PartialSegment(base_uri=self._base_uri, **partial) for partial in parts ] if parts else [] )
         if init_section is not None:
@@ -507,8 +508,14 @@ class Segment(BasePathMixin):
             output.append('\n')
 
         if self.cue_out_start:
-            output.append('#EXT-X-CUE-OUT{}\n'.format(
-                (':' + self.scte35_duration) if self.scte35_duration else ''))
+            if self.cue_out_marker and self.scte35:
+                output.append(f'{self.cue_out_marker}:{self.scte35}\n')
+
+            cue_out_suffix = ''
+            if self.scte35_duration:
+                cue_out_suffix = f':{self.scte35_duration}'
+
+            output.append(f'#EXT-X-CUE-OUT{cue_out_suffix}\n')
         elif self.cue_out:
             cue_out_cont_suffix = []
             if self.scte35_elapsedtime:

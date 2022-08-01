@@ -270,6 +270,7 @@ def _parse_ts_chunk(line, data, state):
     scte_op = state.pop if segment['cue_in'] else state.get
     segment['scte35'] = scte_op('current_cue_out_scte35', None)
     segment['scte35_duration'] = scte_op('current_cue_out_duration', None)
+    segment['cue_out_marker'] = scte_op('current_cue_out_marker', None)
     segment['scte35_elapsedtime'] = scte_op('current_cue_out_elapsedtime', None)
     segment['discontinuity'] = state.pop('discontinuity', False)
     if state.get('current_key'):
@@ -395,13 +396,13 @@ def _cueout_no_duration(line):
     # this needs to be called first since line.split in all other
     # parsers will throw a ValueError if passed just this tag
     if line == protocol.ext_x_cue_out:
-        return (None, None)
+        return (None, None, None)
 
 def _cueout_elemental(line, state, prevline):
     param, value = line.split(':', 1)
     res = re.match('.*EXT-OATCLS-SCTE35:(.*)$', prevline)
     if res:
-        return (res.group(1), value)
+        return (res.group(1), value, protocol.ext_oatcls_scte35)
     else:
         return None
 
@@ -409,7 +410,7 @@ def _cueout_envivio(line, state, prevline):
     param, value = line.split(':', 1)
     res = re.match('.*DURATION=(.*),.*,CUE="(.*)"', value)
     if res:
-        return (res.group(2), res.group(1))
+        return (res.group(2), res.group(1), None)
     else:
         return None
 
@@ -420,7 +421,7 @@ def _cueout_duration(line):
     param, value = line.split(':', 1)
     res = re.match(r'DURATION=(.*)', value)
     if res:
-        return (None, res.group(1))
+        return (None, res.group(1), None)
 
 def _cueout_simple(line):
     # this needs to be called after _cueout_elemental
@@ -428,7 +429,7 @@ def _cueout_simple(line):
     param, value = line.split(':', 1)
     res = re.match(r'^(\d+(?:\.\d)?\d*)$', value)
     if res:
-        return (None, res.group(1))
+        return (None, res.group(1), None)
 
 def _parse_cueout(line, state, prevline):
     _cueout_state = (_cueout_no_duration(line)
@@ -439,6 +440,7 @@ def _parse_cueout(line, state, prevline):
     if _cueout_state:
         state['current_cue_out_scte35'] = _cueout_state[0]
         state['current_cue_out_duration'] = _cueout_state[1]
+        state['current_cue_out_marker'] = _cueout_state[2]
 
 def _parse_server_control(line, data, state):
     attribute_parser = {
