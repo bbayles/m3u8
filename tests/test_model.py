@@ -177,6 +177,34 @@ def test_segment_oatcls_scte35_dumps():
     )
     assert cue_out_cont_line not in result
 
+
+def test_segment_standard_scte35_dumps():
+    obj = m3u8.M3U8(playlists.CUE_OUT_EXT_X_SCTE35_PLAYLIST)
+    result = obj.dumps()
+    
+    cue_out_lines = (
+        '#EXT-X-CUE-OUT:18.000\n'
+        '#EXT-X-SCTE35:CUE="/DAzAAAAAAAA///wBQb+AAAAAAAdAhtDVUVJAAAAA3+/AwxBQkNEMDEyMzQ1NkgRAACfkbsV",ID="24601",DURATION=18.0\n'
+        '#EXTINF:6,\n'
+        'segment_101.ts\n'
+    )
+    assert cue_out_lines in result
+    
+    cue_out_cont_lines = (
+        '#EXT-X-CUE-OUT-CONT:ElapsedTime=6.000,Duration=18.000\n'
+        '#EXTINF:6,\n'
+        'segment_102.ts\n'
+    )
+    assert cue_out_cont_lines in result
+    
+    cue_in_lines = (
+        '#EXT-X-CUE-IN\n'
+        '#EXT-X-SCTE35:CUE="/DAzAAAAAAAA///wBQb+AAAAAAAdAhtDVUVJAAAAA3+/AwxBQkNEMDEyMzQ1NkgRAACfkbsV",ID="24601"\n'
+        '#EXTINF:6,\n'
+        'segment_104.ts\n'
+    )
+    assert cue_out_cont_lines in result
+
 def test_segment_cue_out_start_dumps():
     obj = m3u8.M3U8(playlists.CUE_OUT_WITH_DURATION_PLAYLIST)
 

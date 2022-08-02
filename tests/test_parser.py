@@ -681,6 +681,29 @@ def test_cue_in_pops_scte35_data_and_duration():
     assert data['segments'][10]['scte35'] == None
     assert data['segments'][10]['scte35_duration'] == None
 
+def test_standard_scte35_cue():
+    data = m3u8.parse(playlists.CUE_OUT_EXT_X_SCTE35_PLAYLIST)
+    cue = '/DAzAAAAAAAA///wBQb+AAAAAAAdAhtDVUVJAAAAA3+/AwxBQkNEMDEyMzQ1NkgRAACfkbsV'
+    actual = [(s['scte35']) for s in data['segments']]
+    expected = [None, cue, cue, cue, cue, None]
+    assert actual == expected
+
+def test_standard_scte35_attribute():
+    data = m3u8.parse(playlists.CUE_OUT_EXT_X_SCTE35_PLAYLIST)
+    cue = '/DAzAAAAAAAA///wBQb+AAAAAAAdAhtDVUVJAAAAA3+/AwxBQkNEMDEyMzQ1NkgRAACfkbsV'
+    cue_id = '24601'
+    cue_duration = 18.0
+    actual = [s['standard_scte35'] for s in data['segments']]
+    expected = [
+        None,
+        {'cue': cue, 'id': cue_id, 'duration': cue_duration},
+        None,
+        None,
+        {'cue': cue, 'id': cue_id},
+        None
+    ]
+    assert actual == expected
+
 def test_playlist_with_stable_variant_id():
     data = m3u8.parse(playlists.VARIANT_PLAYLIST_WITH_STABLE_VARIANT_ID)
     assert data['playlists'][0]['stream_info']['stable_variant_id'] == 'eb9c6e4de930b36d9a67fbd38a30b39f865d98f4a203d2140bbf71fd58ad764e'

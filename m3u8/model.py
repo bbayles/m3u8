@@ -10,6 +10,7 @@ from m3u8.protocol import (
     ext_x_key,
     ext_x_map,
     ext_oatcls_scte35,
+    ext_x_scte35,
     ext_x_session_key,
     ext_x_start,
 )
@@ -449,8 +450,9 @@ class Segment(BasePathMixin):
     def __init__(self, uri=None, base_uri=None, program_date_time=None, current_program_date_time=None,
                  duration=None, title=None, bitrate=None, byterange=None, cue_out=False,
                  cue_out_start=False, cue_in=False, discontinuity=False, key=None, scte35=None,
-                 oatcls_scte35=None, scte35_duration=None, scte35_elapsedtime=None, keyobject=None,
-                 parts=None, init_section=None, dateranges=None, gap_tag=None, custom_parser_values=None):
+                 standard_scte35=None, oatcls_scte35=None, scte35_duration=None, scte35_elapsedtime=None,
+                 keyobject=None, parts=None, init_section=None, dateranges=None, gap_tag=None,
+                 custom_parser_values=None):
         self.uri = uri
         self.duration = duration
         self.title = title
@@ -464,6 +466,7 @@ class Segment(BasePathMixin):
         self.cue_out = cue_out
         self.cue_in = cue_in
         self.scte35 = scte35
+        self.standard_scte35 = standard_scte35
         self.oatcls_scte35 = oatcls_scte35
         self.scte35_duration = scte35_duration
         self.scte35_elapsedtime = scte35_elapsedtime
@@ -526,16 +529,29 @@ class Segment(BasePathMixin):
                 cue_out_cont_suffix.append(f'ElapsedTime={self.scte35_elapsedtime}')
             if self.scte35_duration:
                 cue_out_cont_suffix.append(f'Duration={self.scte35_duration}')
-            if self.scte35:
-                cue_out_cont_suffix.append(f'SCTE35={self.scte35}')
+            if self.oatcls_scte35:
+                cue_out_cont_suffix.append(f'SCTE35={self.oatcls_scte35}')
 
             if cue_out_cont_suffix:
                 cue_out_cont_suffix = ':' + ','.join(cue_out_cont_suffix)
             else:
                 cue_out_cont_suffix = ''
             output.append(f'#EXT-X-CUE-OUT-CONT{cue_out_cont_suffix}\n')
+        
         if self.cue_in:
             output.append('#EXT-X-CUE-IN\n')
+
+        if self.standard_scte35:
+            standard_scte35_attrs = []
+            for key, value in self.standard_scte35.items():
+                if value is not None:
+                    key = key.upper().replace('_', '-')
+                    value = f'"{value}"' if isinstance(value, str) else value
+                    standard_scte35_attrs.append(f'{key.upper()}={value}')
+
+            if standard_scte35_attrs:
+                standard_scte35_attrs = ','.join(standard_scte35_attrs)
+                output.append(f'{ext_x_scte35}:{standard_scte35_attrs}\n')
 
         if self.parts:
             output.append(str(self.parts))
