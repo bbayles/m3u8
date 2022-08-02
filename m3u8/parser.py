@@ -394,7 +394,6 @@ def _parse_cueout_cont(line, state):
         state['current_cue_out_duration'] = duration
 
     if duration:
-        current_cue_out_scte35 = state.get('current_cue_out_scte35')
         state['current_cue_out_scte35'] = (
             cue_info.get('scte35') or state.get('current_cue_out_scte35')
         )
@@ -574,8 +573,7 @@ def _parse_standard_scte35(line, state):
 def _parse_oatcls_scte35(line, state):
     scte35_cue = line.split(':', 1)[1]
     state['current_cue_out_oatcls_scte35'] = scte35_cue
-    current_cue_out_scte35 = state.get('current_cue_out_scte35')
-    state['current_cue_out_scte35'] = scte35_cue or current_cue_out_scte35
+    state['current_cue_out_scte35'] = scte35_cue or state.get('current_cue_out_scte35')
 
 
 def string_to_lines(string):
