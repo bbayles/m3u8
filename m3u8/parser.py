@@ -447,19 +447,6 @@ def _parse_cueout(line, state):
         state['current_cue_out_duration'] = cue_out_duration
 
 
-def _parse_cueout(line, state):
-    _cueout_state = (_cueout_no_duration(line)
-                     or _cueout_envivio(line, state)
-                     or _cueout_duration(line)
-                     or _cueout_simple(line))
-    if _cueout_state:
-        cue_out_scte35, cue_out_duration = _cueout_state
-        state['current_cue_out_scte35'] = (
-            cue_out_scte35 or state.get('current_cue_out_scte35')
-        )
-        state['current_cue_out_duration'] = cue_out_duration
-
-
 def _parse_server_control(line, data, state):
     attribute_parser = {
         "can_block_reload":     str,

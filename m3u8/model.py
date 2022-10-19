@@ -510,10 +510,9 @@ class Segment(BasePathMixin):
             output.append('#EXT-X-PROGRAM-DATE-TIME:%s\n' %
                           format_date_time(self.program_date_time, timespec=timespec))
 
-        if len(self.dateranges):    
+        if len(self.dateranges):
             output.append(str(self.dateranges))
             output.append('\n')
-
 
         if self.cue_out_start:
             if self.oatcls_scte35:
