@@ -533,8 +533,10 @@ class Segment(BasePathMixin):
                 cue_out_cont_suffix.append(f'ElapsedTime={self.scte35_elapsedtime}')
             if self.scte35_duration:
                 cue_out_cont_suffix.append(f'Duration={self.scte35_duration}')
-            if self.oatcls_scte35:
-                cue_out_cont_suffix.append(f'SCTE35={self.oatcls_scte35}')
+            if self.oatcls_scte35 or self.standard_scte35:
+                cue_out_cont_suffix.append(
+                    f'SCTE35={self.oatcls_scte35 or self.standard_scte35}'
+                )
 
             if cue_out_cont_suffix:
                 cue_out_cont_suffix = ':' + ','.join(cue_out_cont_suffix)
