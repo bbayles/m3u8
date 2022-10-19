@@ -7,9 +7,10 @@ import os
 import errno
 
 from m3u8.protocol import (
+    ext_oatcls_scte35,
+    ext_x_asset,
     ext_x_key,
     ext_x_map,
-    ext_oatcls_scte35,
     ext_x_scte35,
     ext_x_session_key,
     ext_x_start,
@@ -369,12 +370,8 @@ class M3U8(object):
 
     def _create_sub_directories(self, filename):
         basename = os.path.dirname(filename)
-        try:
-            if basename:
-                os.makedirs(basename)
-        except OSError as error:
-            if error.errno != errno.EEXIST:
-                raise
+        if basename:
+            os.makedirs(basename, exist_ok=True)
 
 
 class Segment(BasePathMixin):
@@ -451,8 +448,8 @@ class Segment(BasePathMixin):
                  duration=None, title=None, bitrate=None, byterange=None, cue_out=False,
                  cue_out_start=False, cue_in=False, discontinuity=False, key=None, scte35=None,
                  standard_scte35=None, oatcls_scte35=None, scte35_duration=None, scte35_elapsedtime=None,
-                 keyobject=None, parts=None, init_section=None, dateranges=None, gap_tag=None,
-                 custom_parser_values=None):
+                 asset_metadata=None, keyobject=None, parts=None, init_section=None, dateranges=None,
+                 gap_tag=None, custom_parser_values=None):
         self.uri = uri
         self.duration = duration
         self.title = title
@@ -470,6 +467,7 @@ class Segment(BasePathMixin):
         self.oatcls_scte35 = oatcls_scte35
         self.scte35_duration = scte35_duration
         self.scte35_elapsedtime = scte35_elapsedtime
+        self.asset_metadata = asset_metadata
         self.key = keyobject
         self.parts = PartialSegmentList( [ PartialSegment(base_uri=self._base_uri, **partial) for partial in parts ] if parts else [] )
         if init_section is not None:
@@ -512,7 +510,7 @@ class Segment(BasePathMixin):
             output.append('#EXT-X-PROGRAM-DATE-TIME:%s\n' %
                           format_date_time(self.program_date_time, timespec=timespec))
 
-        if len(self.dateranges):
+        if len(self.dateranges):    
             output.append(str(self.dateranges))
             output.append('\n')
 
@@ -521,8 +519,15 @@ class Segment(BasePathMixin):
             if self.oatcls_scte35:
                 output.append(f'{ext_oatcls_scte35}:{self.oatcls_scte35}\n')
 
+            if self.asset_metadata:
+                asset_suffix = []
+                for metadata_key, metadata_value in self.asset_metadata.items():
+                    asset_suffix.append(f'{metadata_key.upper()}={metadata_value}')
+                output.append(f"{ext_x_asset}:{','.join(asset_suffix)}\n")
+
             output.append('#EXT-X-CUE-OUT{}\n'.format(
-                (':' + self.scte35_duration) if self.scte35_duration else ''))
+                (':' + self.scte35_duration) if self.scte35_duration else '')
+            )
         elif self.cue_out:
             cue_out_cont_suffix = []
             if self.scte35_elapsedtime:

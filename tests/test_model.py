@@ -166,22 +166,13 @@ def test_segment_oatcls_scte35_dumps():
     # Only insert OATCLS-SCTE35 at cue out
     cue_out_line = (
         '#EXT-OATCLS-SCTE35:/DAlAAAAAAAAAP/wFAUAAAABf+//wpiQkv4ARKogAAEBAQAAQ6sodg==\n'
-        '#EXT-X-CUE-OUT'
     )
-    assert cue_out_line in result
-    
-    # Don't insert it for continued cue outs
-    cue_out_cont_line =  (
-        '#EXT-OATCLS-SCTE35:/DAlAAAAAAAAAP/wFAUAAAABf+//wpiQkv4ARKogAAEBAQAAQ6sodg==\n'
-        '#EXT-X-CUE-OUT-CONT'
-    )
-    assert cue_out_cont_line not in result
-
+    assert result.count(cue_out_line) == 1
 
 def test_segment_standard_scte35_dumps():
     obj = m3u8.M3U8(playlists.CUE_OUT_EXT_X_SCTE35_PLAYLIST)
     result = obj.dumps()
-    
+
     cue_out_lines = (
         '#EXT-X-CUE-OUT:18.000\n'
         '#EXT-X-SCTE35:CUE="/DAzAAAAAAAA///wBQb+AAAAAAAdAhtDVUVJAAAAA3+/AwxBQkNEMDEyMzQ1NkgRAACfkbsV",ID="24601",DURATION=18.0\n'
@@ -189,14 +180,14 @@ def test_segment_standard_scte35_dumps():
         'segment_101.ts\n'
     )
     assert cue_out_lines in result
-    
+
     cue_out_cont_lines = (
         '#EXT-X-CUE-OUT-CONT:ElapsedTime=6.000,Duration=18.000\n'
         '#EXTINF:6,\n'
         'segment_102.ts\n'
     )
     assert cue_out_cont_lines in result
-    
+
     cue_in_lines = (
         '#EXT-X-CUE-IN\n'
         '#EXT-X-SCTE35:CUE="/DAzAAAAAAAA///wBQb+AAAAAAAdAhtDVUVJAAAAA3+/AwxBQkNEMDEyMzQ1NkgRAACfkbsV",ID="24601"\n'
@@ -250,6 +241,18 @@ def test_segment_cue_out_no_duration():
     obj = m3u8.M3U8(playlists.CUE_OUT_NO_DURATION_PLAYLIST)
     assert obj.segments[0].cue_out_start == True
     assert obj.segments[2].cue_in == True
+
+
+def test_segment_asset_metadata_dumps():
+    obj = m3u8.M3U8(playlists.CUE_OUT_ELEMENTAL_PLAYLIST)
+    result = obj.dumps()
+
+    # Only insert EXT-X-ASSET at cue out
+    asset_metadata_line = (
+        '#EXT-X-ASSET:GENRE=CV,CAID=12345678,EPISODE="Episode%20Name%20Date",'
+        'SEASON="Season%20Name%20and%20Number",SERIES="Series%2520Name"\n'
+    )
+    assert result.count(asset_metadata_line) == 1
 
 def test_keys_on_clear_playlist():
     obj = m3u8.M3U8(playlists.SIMPLE_PLAYLIST)
@@ -640,21 +643,18 @@ def test_dump_should_create_sub_directories(tmpdir):
 
     assert_file_content(filename, expected)
 
-def test_dump_should_raise_if_create_sub_directories_fails(tmpdir, monkeypatch):
-    def raiseOSError(*args):
-        raise OSError
+def test_dump_should_raise_if_create_sub_directories_fails(tmpdir):
+    # The first subdirectory is read-only
+    subdir_1 = os.path.join(tmpdir, 'subdir1')
+    os.mkdir(subdir_1, mode=0o400)
 
-    monkeypatch.setattr(os, "makedirs", raiseOSError)
+    # The file is to be stored in a second subdirectory that's underneath the first
+    subdir_2 = os.path.join(subdir_1, 'subdir2')
+    file_name = os.path.join(subdir_2, 'playlist.m3u8')
 
-    raised = False
-    try:
-        obj = m3u8.M3U8(playlists.SIMPLE_PLAYLIST)
-        obj.dump(str(tmpdir.join('subdir1', 'playlist.m3u8')))
-    except OSError as e:
-        raised = True
-    finally:
-        assert raised
-
+    # When we try to write it, we'll be prevented from creating the second subdirectory
+    with pytest.raises(OSError):
+        m3u8.M3U8(playlists.SIMPLE_PLAYLIST).dump(file_name)
 
 def test_dump_should_work_for_variant_streams():
     obj = m3u8.M3U8(playlists.VARIANT_PLAYLIST)

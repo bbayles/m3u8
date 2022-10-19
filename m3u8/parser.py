@@ -121,6 +121,9 @@ def parse(content, strict=False, custom_tags_parser=None):
         elif line.startswith(f'{protocol.ext_oatcls_scte35}:'):
             _parse_oatcls_scte35(line, state)
 
+        elif line.startswith(f'{protocol.ext_x_asset}:'):
+            _parse_asset(line, state)
+
         elif line.startswith(protocol.ext_x_cue_in):
             state['cue_in'] = True
 
@@ -279,6 +282,7 @@ def _parse_ts_chunk(line, data, state):
     segment['oatcls_scte35'] = scte_op('current_cue_out_oatcls_scte35', None)
     segment['scte35_duration'] = scte_op('current_cue_out_duration', None)
     segment['scte35_elapsedtime'] = scte_op('current_cue_out_elapsedtime', None)
+    segment['asset_metadata'] = scte_op('asset_metadata', None)
     segment['discontinuity'] = state.pop('discontinuity', False)
     if state.get('current_key'):
         segment['key'] = state['current_key']
@@ -303,6 +307,7 @@ def _parse_attribute_list(prefix, line, attribute_parser, default_parser=None):
 
         if name in attribute_parser:
             value = attribute_parser[name](value)
+
         elif default_parser is not None:
             value = default_parser(value)
 
@@ -429,6 +434,19 @@ def _cueout_simple(line):
     if res:
         return (None, res.group(1))
 
+
+def _parse_cueout(line, state):
+    _cueout_state = (_cueout_no_duration(line)
+                     or _cueout_envivio(line, state)
+                     or _cueout_duration(line)
+                     or _cueout_simple(line))
+    if _cueout_state:
+        cue_out_scte35, cue_out_duration = _cueout_state
+        current_cue_out_scte35 = state.get('current_cue_out_scte35')
+        state['current_cue_out_scte35'] = cue_out_scte35 or current_cue_out_scte35
+        state['current_cue_out_duration'] = cue_out_duration
+
+
 def _parse_cueout(line, state):
     _cueout_state = (_cueout_no_duration(line)
                      or _cueout_envivio(line, state)
@@ -440,6 +458,7 @@ def _parse_cueout(line, state):
             cue_out_scte35 or state.get('current_cue_out_scte35')
         )
         state['current_cue_out_duration'] = cue_out_duration
+
 
 def _parse_server_control(line, data, state):
     attribute_parser = {
@@ -573,7 +592,15 @@ def _parse_standard_scte35(line, state):
 def _parse_oatcls_scte35(line, state):
     scte35_cue = line.split(':', 1)[1]
     state['current_cue_out_oatcls_scte35'] = scte35_cue
-    state['current_cue_out_scte35'] = scte35_cue or state.get('current_cue_out_scte35')
+    state['current_cue_out_scte35'] = scte35_cue
+
+
+def _parse_asset(line, state):
+    # EXT-X-ASSET attribute values may or may not be quoted, and need to be URL-encoded.
+    # They are preserved as-is here to prevent loss of information.
+    state['asset_metadata'] = _parse_attribute_list(
+        protocol.ext_x_asset, line, {}, default_parser=str
+    )
 
 
 def string_to_lines(string):
